@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["async_impl","maybe_async","must_be_async","must_be_sync","sync_impl","test"]};

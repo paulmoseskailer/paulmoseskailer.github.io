@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["TICK_HZ"],"fn":["now","schedule_wake"],"macro":["time_driver_impl"],"trait":["Driver"]};

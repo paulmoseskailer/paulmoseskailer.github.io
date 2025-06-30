@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Why bother writing similar code twice for blocking and async code?"><title>maybe_async - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-84e720fa.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="maybe_async" data-themes="" data-resource-suffix="" data-rustdoc-version="1.89.0-nightly (e703dff8f 2025-06-11)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../static.files/storage-4e99c027.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-fd3af306.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../maybe_async/index.html">maybe_<wbr>async</a><span class="version">0.2.10</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#motivation" title="Motivation">Motivation</a></li><li><a href="#macros-in-detail" title="Macros in Detail">Macros in Detail</a></li><li><a href="#whats-under-the-hook" title="What’s Under the Hook">What’s Under the Hook</a></li><li><a href="#examples" title="Examples">Examples</a><ul><li><a href="#rust-client-for-services" title="rust client for services">rust client for services</a></li></ul></li><li><a href="#license" title="License">License</a></li></ul><h3><a href="#attributes">Crate Items</a></h3><ul class="block"><li><a href="#attributes" title="Attribute Macros">Attribute Macros</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>maybe_async</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/maybe_async/lib.rs.html#1-626">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><strong>Why bother writing similar code twice for blocking and async code?</strong></p>
+<p><a href="https://github.com/fMeow/maybe-async-rs/actions"><img src="https://github.com/fMeow/maybe-async-rs/workflows/CI%20%28Linux%29/badge.svg?branch=main" alt="Build Status" /></a>
+<a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT licensed" /></a>
+<a href="https://crates.io/crates/maybe-async"><img src="https://img.shields.io/crates/v/maybe-async.svg" alt="Latest Version" /></a>
+<a href="https://docs.rs/maybe-async"><img src="https://docs.rs/maybe-async/badge.svg" alt="maybe-async" /></a></p>
+<p>When implementing both sync and async versions of API in a crate, most API
+of the two version are almost the same except for some async/await keyword.</p>
+<p><code>maybe-async</code> help unifying async and sync implementation by <strong>procedural
+macro</strong>.</p>
+<ul>
+<li>Write async code with normal <code>async</code>, <code>await</code>, and let <code>maybe_async</code>
+handles
+those <code>async</code> and <code>await</code> when you need a blocking code.</li>
+<li>Switch between sync and async by toggling <code>is_sync</code> feature gate in
+<code>Cargo.toml</code>.</li>
+<li>use <code>must_be_async</code> and <code>must_be_sync</code> to keep code in specified version</li>
+<li>use <code>async_impl</code> and <code>sync_impl</code> to only compile code block on specified
+version</li>
+<li>A handy macro to unify unit test code is also provided.</li>
+</ul>
+<p>These procedural macros can be applied to the following codes:</p>
+<ul>
+<li>trait item declaration</li>
+<li>trait implementation</li>
+<li>function definition</li>
+<li>struct definition</li>
+</ul>
+<p><strong>RECOMMENDATION</strong>: Enable <strong>resolver ver2</strong> in your crate, which is
+introduced in Rust 1.51. If not, two crates in dependency with conflict
+version (one async and another blocking) can fail compilation.</p>
+<h3 id="motivation"><a class="doc-anchor" href="#motivation">§</a>Motivation</h3>
+<p>The async/await language feature alters the async world of rust.
+Comparing with the map/and_then style, now the async code really resembles
+sync version code.</p>
+<p>In many crates, the async and sync version of crates shares the same API,
+but the minor difference that all async code must be awaited prevent the
+unification of async and sync code. In other words, we are forced to write
+an async and a sync implementation respectively.</p>
+<h3 id="macros-in-detail"><a class="doc-anchor" href="#macros-in-detail">§</a>Macros in Detail</h3>
+<p><code>maybe-async</code> offers 4 set of attribute macros: <code>maybe_async</code>,
+<code>sync_impl</code>/<code>async_impl</code>, <code>must_be_sync</code>/<code>must_be_async</code>,  and <code>test</code>.</p>
+<p>To use <code>maybe-async</code>, we must know which block of codes is only used on
+blocking implementation, and which on async. These two implementation should
+share the same function signatures except for async/await keywords, and use
+<code>sync_impl</code> and <code>async_impl</code> to mark these implementation.</p>
+<p>Use <code>maybe_async</code> macro on codes that share the same API on both async and
+blocking code except for async/await keywords. And use feature gate
+<code>is_sync</code> in <code>Cargo.toml</code> to toggle between async and blocking code.</p>
+<ul>
+<li>
+<p><code>maybe_async</code></p>
+<p>Offers a unified feature gate to provide sync and async conversion on
+demand by feature gate <code>is_sync</code>, with <strong>async first</strong> policy.</p>
+<p>Want to keep async code? add <code>maybe_async</code> in dependencies with default
+features, which means <code>maybe_async</code> is the same as <code>must_be_async</code>:</p>
+<div class="example-wrap"><pre class="language-toml"><code>[dependencies]
+maybe_async = &quot;0.2&quot;</code></pre></div>
+<p>Want to convert async code to sync? Add <code>maybe_async</code> to dependencies with
+an <code>is_sync</code> feature gate. In this way, <code>maybe_async</code> is the same as
+<code>must_be_sync</code>:</p>
+<div class="example-wrap"><pre class="language-toml"><code>[dependencies]
+maybe_async = { version = &quot;0.2&quot;, features = [&quot;is_sync&quot;] }</code></pre></div>
+<p>There are three usage variants for <code>maybe_async</code> attribute usage:</p>
+<ul>
+<li>
+<p><code>#[maybe_async]</code> or <code>#[maybe_async(Send)]</code></p>
+<p>In this mode, <code>#[async_trait::async_trait]</code> is added to trait declarations and trait implementations
+to support async fn in traits.</p>
+</li>
+<li>
+<p><code>#[maybe_async(?Send)]</code></p>
+<p>Not all async traits need futures that are <code>dyn Future + Send</code>.
+In this mode, <code>#[async_trait::async_trait(?Send)]</code> is added to trait declarations and trait implementations,
+to avoid having “Send” and “Sync” bounds placed on the async trait
+methods.</p>
+</li>
+<li>
+<p><code>#[maybe_async(AFIT)]</code></p>
+<p>AFIT is acronym for <strong>a</strong>sync <strong>f</strong>unction <strong>i</strong>n <strong>t</strong>rait, stabilized from rust 1.74</p>
+</li>
+</ul>
+<p>For compatibility reasons, the <code>async fn</code> in traits is supported via a verbose <code>AFIT</code> flag. This will become
+the default mode for the next major release.</p>
+</li>
+<li>
+<p><code>must_be_async</code></p>
+<p><strong>Keep async</strong>.</p>
+<p>There are three usage variants for <code>must_be_async</code> attribute usage:</p>
+<ul>
+<li><code>#[must_be_async]</code> or <code>#[must_be_async(Send)]</code></li>
+<li><code>#[must_be_async(?Send)]</code></li>
+<li><code>#[must_be_async(AFIT)]</code></li>
+</ul>
+</li>
+<li>
+<p><code>must_be_sync</code></p>
+<p><strong>Convert to sync code</strong>. Convert the async code into sync code by
+removing all <code>async move</code>, <code>async</code> and <code>await</code> keyword</p>
+</li>
+<li>
+<p><code>sync_impl</code></p>
+<p>A sync implementation should compile on blocking implementation and
+must simply disappear when we want async version.</p>
+<p>Although most of the API are almost the same, there definitely come to a
+point when the async and sync version should differ greatly. For
+example, a MongoDB client may use the same API for async and sync
+version, but the code to actually send reqeust are quite different.</p>
+<p>Here, we can use <code>sync_impl</code> to mark a synchronous implementation, and a
+sync implementation should disappear when we want async version.</p>
+</li>
+<li>
+<p><code>async_impl</code></p>
+<p>An async implementation should on compile on async implementation and
+must simply disappear when we want sync version.</p>
+<p>There are three usage variants for <code>async_impl</code> attribute usage:</p>
+<ul>
+<li><code>#[async_impl]</code> or <code>#[async_impl(Send)]</code></li>
+<li><code>#[async_impl(?Send)]</code></li>
+<li><code>#[async_impl(AFIT)]</code></li>
+</ul>
+</li>
+<li>
+<p><code>test</code></p>
+<p>Handy macro to unify async and sync <strong>unit and e2e test</strong> code.</p>
+<p>You can specify the condition to compile to sync test code
+and also the conditions to compile to async test code with given test
+macro, e.x. <code>tokio::test</code>, <code>async_std::test</code>, etc. When only sync
+condition is specified,the test code only compiles when sync condition
+is met.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>
+<span class="attr">#[maybe_async::test(
+    feature=<span class="string">"is_sync"</span>,
+    <span class="kw">async</span>(
+        all(not(feature=<span class="string">"is_sync"</span>), feature=<span class="string">"async_std"</span>),
+        async_std::test
+    ),
+    <span class="kw">async</span>(
+        all(not(feature=<span class="string">"is_sync"</span>), feature=<span class="string">"tokio"</span>),
+        tokio::test
+    )
+)]
+</span><span class="kw">async fn </span>test_async_fn() {
+    <span class="kw">let </span>res = async_fn().<span class="kw">await</span>;
+    <span class="macro">assert_eq!</span>(res, <span class="bool-val">true</span>);
+}</code></pre></div>
+</li>
+</ul>
+<h3 id="whats-under-the-hook"><a class="doc-anchor" href="#whats-under-the-hook">§</a>What’s Under the Hook</h3>
+<p><code>maybe-async</code> compiles your code in different way with the <code>is_sync</code> feature
+gate. It removes all <code>await</code> and <code>async</code> keywords in your code under
+<code>maybe_async</code> macro and conditionally compiles codes under <code>async_impl</code> and
+<code>sync_impl</code>.</p>
+<p>Here is a detailed example on what’s going on whe the <code>is_sync</code> feature
+gate set or not.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[maybe_async::maybe_async(AFIT)]
+</span><span class="kw">trait </span>A {
+    <span class="kw">async fn </span>async_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn </span>sync_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">struct </span>Foo;
+
+<span class="attr">#[maybe_async::maybe_async(AFIT)]
+</span><span class="kw">impl </span>A <span class="kw">for </span>Foo {
+    <span class="kw">async fn </span>async_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn </span>sync_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="attr">#[maybe_async::maybe_async]
+</span><span class="kw">async fn </span>maybe_async_fn() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+    <span class="kw">let </span>a = Foo::async_fn_name().<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="kw">let </span>b = Foo::sync_fn_name()<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p>When <code>maybe-async</code> feature gate <code>is_sync</code> is <strong>NOT</strong> set, the generated code
+is async code:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// Compiled code when `is_sync` is toggled off.
+</span><span class="kw">trait </span>A {
+    <span class="kw">async fn </span>maybe_async_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn </span>sync_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">struct </span>Foo;
+
+<span class="kw">impl </span>A <span class="kw">for </span>Foo {
+    <span class="kw">async fn </span>maybe_async_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn </span>sync_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">async fn </span>maybe_async_fn() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+    <span class="kw">let </span>a = Foo::maybe_async_fn_name().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>b = Foo::sync_fn_name()<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p>When <code>maybe-async</code> feature gate <code>is_sync</code> is set, all async keyword is
+ignored and yields a sync version code:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// Compiled code when `is_sync` is toggled on.
+</span><span class="kw">trait </span>A {
+    <span class="kw">fn </span>maybe_async_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn </span>sync_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">struct </span>Foo;
+
+<span class="kw">impl </span>A <span class="kw">for </span>Foo {
+    <span class="kw">fn </span>maybe_async_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+    <span class="kw">fn </span>sync_fn_name() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">fn </span>maybe_async_fn() -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+    <span class="kw">let </span>a = Foo::maybe_async_fn_name()<span class="question-mark">?</span>;
+    <span class="kw">let </span>b = Foo::sync_fn_name()<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<h3 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h3><h4 id="rust-client-for-services"><a class="doc-anchor" href="#rust-client-for-services">§</a>rust client for services</h4>
+<p>When implementing rust client for any services, like awz3. The higher level
+API of async and sync version is almost the same, such as creating or
+deleting a bucket, retrieving an object, etc.</p>
+<p>The example <code>service_client</code> is a proof of concept that <code>maybe_async</code> can
+actually free us from writing almost the same code for sync and async. We
+can toggle between a sync AWZ3 client and async one by <code>is_sync</code> feature
+gate when we add <code>maybe-async</code> to dependency.</p>
+<h2 id="license"><a class="doc-anchor" href="#license">§</a>License</h2>
+<p>MIT</p>
+</div></details><h2 id="attributes" class="section-header">Attribute Macros<a href="#attributes" class="anchor">§</a></h2><dl class="item-table"><dt><a class="attr" href="attr.async_impl.html" title="attr maybe_async::async_impl">async_<wbr>impl</a></dt><dd>mark async implementation</dd><dt><a class="attr" href="attr.maybe_async.html" title="attr maybe_async::maybe_async">maybe_<wbr>async</a></dt><dd>maybe_async attribute macro</dd><dt><a class="attr" href="attr.must_be_async.html" title="attr maybe_async::must_be_async">must_<wbr>be_<wbr>async</a></dt><dd>convert marked async code to async code with <code>async-trait</code></dd><dt><a class="attr" href="attr.must_be_sync.html" title="attr maybe_async::must_be_sync">must_<wbr>be_<wbr>sync</a></dt><dd>convert marked async code to sync code</dd><dt><a class="attr" href="attr.sync_impl.html" title="attr maybe_async::sync_impl">sync_<wbr>impl</a></dt><dd>mark sync implementation</dd><dt><a class="attr" href="attr.test.html" title="attr maybe_async::test">test</a></dt><dd>Handy macro to unify test code of sync and async code</dd></dl></section></div></main></body></html>

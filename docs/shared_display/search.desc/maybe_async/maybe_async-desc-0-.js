@@ -1,0 +1,1 @@
+searchState.loadedDescShard("maybe_async", 0, "<strong>Why bother writing similar code twice for blocking and </strong>…\nmark async implementation\nmaybe_async attribute macro\nconvert marked async code to async code with <code>async-trait</code>\nconvert marked async code to sync code\nmark sync implementation\nHandy macro to unify test code of sync and async code")

@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Handy macro to unify test code of sync and async code"><title>test in maybe_async - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-84e720fa.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="maybe_async" data-themes="" data-resource-suffix="" data-rustdoc-version="1.89.0-nightly (e703dff8f 2025-06-11)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../static.files/storage-4e99c027.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-fd3af306.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../maybe_async/index.html">maybe_<wbr>async</a><span class="version">0.2.10</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">maybe_async</a></div><h1>Attribute Macro <span class="attr">test</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/maybe_async/lib.rs.html#546-551">Source</a> </span></div><pre class="rust item-decl"><code>#[test]</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Handy macro to unify test code of sync and async code</p>
+<p>Since the API of both sync and async code are the same,
+with only difference that async functions must be awaited.
+So it’s tedious to write unit sync and async respectively.</p>
+<p>This macro helps unify the sync and async unit test code.
+Pass the condition to treat test code as sync as the first
+argument. And specify the condition when to treat test code
+as async and the lib to run async test, e.x. <code>async-std::test</code>,
+<code>tokio::test</code>, or any valid attribute macro.</p>
+<p><strong>ATTENTION</strong>: do not write await inside a assert macro</p>
+<ul>
+<li>Examples</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[maybe_async::maybe_async]
+</span><span class="kw">async fn </span>async_fn() -&gt; bool {
+    <span class="bool-val">true
+</span>}
+
+<span class="attr">#[maybe_async::test(
+    <span class="comment">// when to treat the test code as sync version
+    </span>feature=<span class="string">"is_sync"</span>,
+    <span class="comment">// when to run async test
+    </span><span class="kw">async</span>(all(not(feature=<span class="string">"is_sync"</span>), feature=<span class="string">"async_std"</span>), async_std::test),
+    <span class="comment">// you can specify multiple conditions for different async runtime
+    </span><span class="kw">async</span>(all(not(feature=<span class="string">"is_sync"</span>), feature=<span class="string">"tokio"</span>), tokio::test)
+)]
+</span><span class="kw">async fn </span>test_async_fn() {
+    <span class="kw">let </span>res = async_fn().<span class="kw">await</span>;
+    <span class="macro">assert_eq!</span>(res, <span class="bool-val">true</span>);
+}
+
+<span class="comment">// Only run test in sync version
+</span><span class="attr">#[maybe_async::test(feature = <span class="string">"is_sync"</span>)]
+</span><span class="kw">async fn </span>test_sync_fn() {
+    <span class="kw">let </span>res = async_fn().<span class="kw">await</span>;
+    <span class="macro">assert_eq!</span>(res, <span class="bool-val">true</span>);
+}</code></pre></div>
+<p>The above code is transcripted to the following code:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>
+<span class="comment">// convert to sync version when sync condition is met, keep in async version when corresponding
+// condition is met
+</span><span class="attr">#[cfg_attr(feature = <span class="string">"is_sync"</span>, must_be_sync, test)]
+#[cfg_attr(
+    all(not(feature = <span class="string">"is_sync"</span>), feature = <span class="string">"async_std"</span>),
+    must_be_async,
+    async_std::test
+)]
+#[cfg_attr(
+    all(not(feature = <span class="string">"is_sync"</span>), feature = <span class="string">"tokio"</span>),
+    must_be_async,
+    tokio::test
+)]
+</span><span class="kw">async fn </span>test_async_fn() {
+    <span class="kw">let </span>res = async_fn().<span class="kw">await</span>;
+    <span class="macro">assert_eq!</span>(res, <span class="bool-val">true</span>);
+}
+
+<span class="comment">// force converted to sync function, and only compile on sync condition
+</span><span class="attr">#[cfg(feature = <span class="string">"is_sync"</span>)]
+#[test]
+</span><span class="kw">fn </span>test_sync_fn() {
+    <span class="kw">let </span>res = async_fn();
+    <span class="macro">assert_eq!</span>(res, <span class="bool-val">true</span>);
+}</code></pre></div>
+</div></details></section></div></main></body></html>

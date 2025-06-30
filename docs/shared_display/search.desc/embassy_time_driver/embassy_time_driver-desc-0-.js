@@ -1,0 +1,1 @@
+searchState.loadedDescShard("embassy_time_driver", 0, "embassy-time-driver\nTime driver\nTicks per second of the global timebase.\nSee <code>Driver::now</code>\nReturn the current timestamp in ticks.\nSchedule the given waker to be woken at <code>at</code>.\nSchedules a waker to be awoken at moment <code>at</code>. If this …\nSet the time Driver implementation.")
