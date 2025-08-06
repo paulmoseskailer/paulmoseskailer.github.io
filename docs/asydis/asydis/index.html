@@ -1,0 +1,100 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Provides an abstraction layer over embedded-graphics, allowing to share a single display among multiple apps, with async concurrency and memory safety handled by the toolkit."><title>asydis - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-84e720fa.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="asydis" data-themes="" data-resource-suffix="" data-rustdoc-version="1.89.0-nightly (e703dff8f 2025-06-11)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../static.files/storage-4e99c027.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-fd3af306.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../asydis/index.html">asydis</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#examples" title="Examples">Examples</a><ul><li><a href="#sharing-a-simulatordisplay" title="Sharing a `SimulatorDisplay`">Sharing a <code>SimulatorDisplay</code></a></li><li><a href="#adding-support-for-a-screen-driver" title="Adding Support for a Screen driver">Adding Support for a Screen driver</a></li></ul></li></ul><h3><a href="#structs">Crate Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#constants" title="Constants">Constants</a></li><li><a href="#statics" title="Statics">Statics</a></li><li><a href="#traits" title="Traits">Traits</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>asydis</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/asydis/lib.rs.html#1-135">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Provides an abstraction layer over <a href="https://crates.io/crates/embedded-graphics">embedded-graphics</a>, allowing to share a single display
+among multiple apps, with async concurrency and memory safety handled by the toolkit.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<p>More examples can be found in the <a href="https://github.com/paulmoseskailer/shared-display/tree/main/examples">examples directory of the github repo</a>.</p>
+<h3 id="sharing-a-simulatordisplay"><a class="doc-anchor" href="#sharing-a-simulatordisplay">§</a>Sharing a <a href="https://github.com/embedded-graphics/simulator"><code>SimulatorDisplay</code></a></h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>asydis::{DisplayPartition, FlushResult, SharedDisplay};
+
+<span class="kw">type </span>DisplayType = SimulatorDisplay&lt;BinaryColor&gt;;
+
+<span class="kw">fn </span>init_simulator_display() -&gt; (DisplayType, Window) {
+    <span class="kw">let </span>output_settings = OutputSettingsBuilder::new()
+        .theme(BinaryColorTheme::OledWhite)
+        .build();
+    (
+        SimulatorDisplay::new(Size::new(<span class="number">128</span>, <span class="number">64</span>)),
+        Window::new(<span class="string">"Simulated Display"</span>, <span class="kw-2">&amp;</span>output_settings),
+    )
+}
+
+<span class="kw">async fn </span>text_app(<span class="kw-2">mut </span>display: DisplayPartition&lt;DisplayType&gt;) -&gt; () {
+    <span class="kw">let </span>character_style = MonoTextStyle::new(<span class="kw-2">&amp;</span>FONT_10X20, BinaryColor::On);
+    <span class="kw">let </span>text_style = TextStyleBuilder::new()
+        .baseline(Baseline::Middle)
+        .alignment(Alignment::Center)
+        .build();
+
+    <span class="kw">loop </span>{
+        Text::with_text_style(
+            <span class="string">"hello \n world"</span>,
+            Point::new(<span class="number">30</span>, <span class="number">20</span>),
+            character_style,
+            text_style,
+        )
+        .draw(<span class="kw-2">&amp;mut </span>display)
+        .<span class="kw">await
+        </span>.unwrap();
+        Timer::after_millis(<span class="number">500</span>).<span class="kw">await</span>;
+        display.clear(BinaryColor::Off).<span class="kw">await</span>.unwrap();
+        Timer::after_millis(<span class="number">500</span>).<span class="kw">await</span>;
+    }
+}
+
+<span class="kw">async fn </span>line_app(<span class="kw-2">mut </span>display: DisplayPartition&lt;DisplayType&gt;) -&gt; () {
+    <span class="kw">loop </span>{
+        Line::new(Point::new(<span class="number">0</span>, <span class="number">0</span>), Point::new(<span class="number">128</span>, <span class="number">128</span>))
+            .draw_styled(
+                <span class="kw-2">&amp;</span>PrimitiveStyle::with_stroke(BinaryColor::On, <span class="number">1</span>),
+                <span class="kw-2">&amp;mut </span>display,
+            )
+            .<span class="kw">await
+            </span>.unwrap();
+        Timer::after_millis(<span class="number">500</span>).<span class="kw">await</span>;
+        Line::new(Point::new(<span class="number">0</span>, <span class="number">63</span>), Point::new(<span class="number">63</span>, <span class="number">0</span>))
+            .draw_styled(
+                <span class="kw-2">&amp;</span>PrimitiveStyle::with_stroke(BinaryColor::On, <span class="number">1</span>),
+                <span class="kw-2">&amp;mut </span>display,
+            )
+            .<span class="kw">await
+            </span>.unwrap();
+        Timer::after_millis(<span class="number">500</span>).<span class="kw">await</span>;
+        display.clear(BinaryColor::Off).<span class="kw">await</span>.unwrap();
+        Timer::after_millis(<span class="number">500</span>).<span class="kw">await</span>;
+    }
+}
+
+<span class="attr">#[embassy_executor::main]
+</span><span class="kw">async fn </span>main(spawner: Spawner) {
+    <span class="kw">let </span>(display, <span class="kw-2">mut </span>window) = init_simulator_display();
+    <span class="kw">let </span><span class="kw-2">mut </span>shared_display: SharedDisplay&lt;DisplayType&gt; = SharedDisplay::new(display, spawner);
+
+    <span class="kw">let </span>right_rect = Rectangle::new(Point::new(<span class="number">64</span>, <span class="number">0</span>), Size::new(<span class="number">64</span>, <span class="number">64</span>));
+    shared_display
+        .launch_new_app(line_app, right_rect)
+        .<span class="kw">await
+        </span>.unwrap();
+
+    <span class="kw">let </span>left_rect = Rectangle::new(Point::new(<span class="number">0</span>, <span class="number">0</span>), Size::new(<span class="number">64</span>, <span class="number">64</span>));
+    shared_display
+        .launch_new_app(text_app, left_rect)
+        .<span class="kw">await
+        </span>.unwrap();
+
+    shared_display
+        .run_flush_loop_with(<span class="kw">async </span>|d, _area| {
+            window.update(d);
+            <span class="kw">if </span>window.events().any(|e| e == SimulatorEvent::Quit) {
+                <span class="kw">return </span>FlushResult::Abort;
+            }
+            FlushResult::Continue
+        }, Duration::from_millis(<span class="number">200</span>))
+        .<span class="kw">await</span>;
+}</code></pre></div>
+<h3 id="adding-support-for-a-screen-driver"><a class="doc-anchor" href="#adding-support-for-a-screen-driver">§</a>Adding Support for a Screen driver</h3>
+<p>To make a screen sharable, it needs to implement <a href="trait.SharableBufferedDisplay.html" title="trait asydis::SharableBufferedDisplay"><code>SharableBufferedDisplay</code></a>.
+To make it usable with integrated framebuffer compression, it needs to implement
+<a href="trait.CompressableDisplay.html" title="trait asydis::CompressableDisplay"><code>CompressableDisplay</code></a>.
+See these forks of the
+<a href="https://github.com/paulmoseskailer/simulator"><code>embedded-graphics-simulator</code></a> and the
+<a href="https://github.com/paulmoseskailer/ssd1351"><code>ssd1351</code> screen driver</a> for examples.</p>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.CompressedBuffer.html" title="struct asydis::CompressedBuffer">Compressed<wbr>Buffer</a></dt><dd>An RLE-encoded framebuffer.</dd><dt><a class="struct" href="struct.CompressedDisplayPartition.html" title="struct asydis::CompressedDisplayPartition">Compressed<wbr>Display<wbr>Partition</a></dt><dd>A partition of a <a href="trait.CompressableDisplay.html" title="trait asydis::CompressableDisplay"><code>CompressableDisplay</code></a>.</dd><dt><a class="struct" href="struct.DecompressingIter.html" title="struct asydis::DecompressingIter">Decompressing<wbr>Iter</a></dt><dd>A decompressing Iterator for an RLE-encoded <a href="struct.CompressedBuffer.html" title="struct asydis::CompressedBuffer"><code>CompressedBuffer</code></a>.</dd><dt><a class="struct" href="struct.DisplayPartition.html" title="struct asydis::DisplayPartition">Display<wbr>Partition</a></dt><dd>A partition of a <a href="trait.SharableBufferedDisplay.html" title="trait asydis::SharableBufferedDisplay"><code>SharableBufferedDisplay</code></a>.</dd><dt><a class="struct" href="struct.SharedCompressedDisplay.html" title="struct asydis::SharedCompressedDisplay">Shared<wbr>Compressed<wbr>Display</a></dt><dd>Shared Display with integrated RLE-compression.</dd><dt><a class="struct" href="struct.SharedDisplay.html" title="struct asydis::SharedDisplay">Shared<wbr>Display</a></dt><dd>Shared Display.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.AppEvent.html" title="enum asydis::AppEvent">AppEvent</a></dt><dd>Events from other apps that allow to alter a partition.</dd><dt><a class="enum" href="enum.EnvelopeError.html" title="enum asydis::EnvelopeError">Envelope<wbr>Error</a></dt><dd>Things that might go wrong trying to envelope the area of an app that closed.</dd><dt><a class="enum" href="enum.FlushResult.html" title="enum asydis::FlushResult">Flush<wbr>Result</a></dt><dd>Whether to continue flushing or not.</dd><dt><a class="enum" href="enum.NewPartitionError.html" title="enum asydis::NewPartitionError">NewPartition<wbr>Error</a></dt><dd>Error Type for creating new screen partitions.</dd></dl><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.MAX_APPS_PER_SCREEN.html" title="constant asydis::MAX_APPS_PER_SCREEN">MAX_<wbr>APPS_<wbr>PER_<wbr>SCREEN</a></dt><dd>Maximum number of apps allowed on the screen concurrently.</dd></dl><h2 id="statics" class="section-header">Statics<a href="#statics" class="anchor">§</a></h2><dl class="item-table"><dt><a class="static" href="static.EVENTS.html" title="static asydis::EVENTS">EVENTS</a></dt><dd>Event queue for all apps to access.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.CompressableDisplay.html" title="trait asydis::CompressableDisplay">Compressable<wbr>Display</a></dt><dd>A buffered <a href="../embedded_graphics_core/draw_target/trait.DrawTarget.html" title="trait embedded_graphics_core::draw_target::DrawTarget"><code>DrawTarget</code></a> that can be compressed and shared among multiple apps.</dd><dt><a class="trait" href="trait.SharableBufferedDisplay.html" title="trait asydis::SharableBufferedDisplay">Sharable<wbr>Buffered<wbr>Display</a></dt><dd>A buffered <a href="../embedded_graphics_core/draw_target/trait.DrawTarget.html" title="trait embedded_graphics_core::draw_target::DrawTarget"><code>DrawTarget</code></a> that can be shared among multiple apps.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.launch_app_in_app.html" title="fn asydis::launch_app_in_app">launch_<wbr>app_<wbr>in_<wbr>app</a></dt><dd>Launches an app from inside another app.</dd></dl></section></div></main></body></html>

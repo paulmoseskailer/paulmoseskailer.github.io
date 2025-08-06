@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_APPS_PER_SCREEN"],"enum":["AppEvent","EnvelopeError","FlushResult","NewPartitionError"],"fn":["launch_app_in_app"],"static":["EVENTS"],"struct":["CompressedBuffer","CompressedDisplayPartition","DecompressingIter","DisplayPartition","SharedCompressedDisplay","SharedDisplay"],"trait":["CompressableDisplay","SharableBufferedDisplay"]};
